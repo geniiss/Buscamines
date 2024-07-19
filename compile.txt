@@ -1,0 +1,1 @@
+emcc game.cc connection.cc algorithm.cc -o game.js -s WASM=1 -s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap']" --bind -s MODULARIZE=1 -s EXPORT_ES6=1
