@@ -1,3 +1,8 @@
+:root {
+  --rows: 9;
+  --cols: 9;
+}
+
 body {
   margin: 0;
   background-color: #333;
@@ -59,8 +64,8 @@ body {
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(9, 30px);
-  grid-template-rows: repeat(9, 30px);
+  grid-template-columns: repeat( var(--cols), 30px);
+  grid-template-rows: repeat(var(--rows), 30px);
   gap: 2px;
 }
 

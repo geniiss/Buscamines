@@ -34,10 +34,11 @@ class Game {
       }
     };
 
-    int rows;
-    int cols;
-    int total_mines;
-    int flags;
+    const int rows;
+    const int cols;
+    const int total_mines;
+    int remaining_mines;
+    bool speedRunMode = true;
     GameStates gameState = READY;
     std::vector<std::vector<Squares>> board;
     std::unordered_set<std::pair<int,int>, pair_hash> safeCells;
@@ -55,6 +56,7 @@ class Game {
     bool pos_ok (int i , int j);
     void unveilCellRecursive (int i, int j);
     void unveilCell(int i, int j);
+    void markCell(int i, int j);
     void distributeMines (int i, int j);
     bool checkWin ();
 
@@ -65,10 +67,11 @@ class Game {
 
   public:
     Game (int r, int c, int m);
-    void markCell (int i, int j);
+    void rightClickCell (int i, int j);
     void clickCell (int i, int j);
     std::string printBoard ();
     int getGameState();
+    int getRemainingMines();
 };
 
 #endif

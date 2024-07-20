@@ -17,13 +17,14 @@ void Game::unveilCellRecursive (int i, int j) {
 }
 
 void Game::unveilCell(int i, int j) {
+  if(board[i][j].isFlagged) return;
   if (gameState == READY) {
     gameState = PLAYING;
     distributeMines(i, j);
   }
   computeProbabilities();
   if (board[i][j].hasMine) {
-    if (safeCells.empty() && uncertainCells.find(std::make_pair(i,j)) != uncertainCells.end()) redistributeMines(i, j);
+    if (safeCells.empty() && mineCells.find(std::make_pair(i,j)) == mineCells.end()) redistributeMines(i, j);
     else {
       gameState = LOSE;
       return;
@@ -31,6 +32,13 @@ void Game::unveilCell(int i, int j) {
   }
   unveilCellRecursive(i, j);
   if (checkWin()) gameState = WIN;
+}
+
+void Game::markCell (int i, int j) {
+  if (board[i][j].isRevealed) return;
+  if (board[i][j].isFlagged) ++remaining_mines;
+  else --remaining_mines;
+  board[i][j].isFlagged = !board[i][j].isFlagged;
 }
 
 void Game::distributeMines (int i, int j) {
@@ -62,20 +70,26 @@ bool Game::checkWin () {
   return true;
 }
 
-Game::Game (int r, int c, int m) {
-  this->rows = r;
-  this->cols = c;
-  this->total_mines = m;
-  this->flags = 0;
+Game::Game (int r, int c, int m) : rows(r), cols(c), total_mines(m) {
+  this->remaining_mines = m;
   this->board = std::vector<std::vector<Squares>>(r, std::vector<Squares>(c));
 }
 
-void Game::markCell (int i, int j) {
-  board[i][j].isFlagged = true;
+void Game::rightClickCell (int i, int j) {
+  if (!pos_ok(i,j)) return;
+  if (speedRunMode) {
+    unveilCell(i,j);
+    return;
+  }
+  markCell(i, j);
 }
 
 void Game::clickCell (int i, int j) {
-  if (!pos_ok(i, j) || board[i][j].isFlagged) return;
+  if (!pos_ok(i, j)) return;
+  if (gameState == READY) {
+    unveilCell(i, j);
+    return;
+  }
   if (board[i][j].isRevealed) {
     int adjacentMines = board[i][j].numAdjacentMines;
     int currentAdjMarked = 0;
@@ -91,6 +105,10 @@ void Game::clickCell (int i, int j) {
         if(pos_ok(posI, posJ) && !board[posI][posJ].isRevealed && !board[posI][posJ].isFlagged) unveilCell(posI, posJ);
       }
     }
+    return;
+  }
+  if (speedRunMode) {
+    markCell(i, j);
     return;
   }
   unveilCell(i, j);
@@ -121,4 +139,8 @@ std::string Game::printBoard () {
 
 int Game::getGameState(){
   return gameState;
+}
+
+int Game::getRemainingMines() {
+  return remaining_mines;
 }

@@ -137,7 +137,7 @@ void Game::computeProbabilities () {
   std::cout << std::endl;
 }
 
-void Game::redistributeMines (int i, int j) {
+void Game::redistributeMines (int posI, int posJ) {
   //clean whole board taking account the covered/uncovered and marked/unmarked
   for (int i = 0; i < rows; ++i) {
     for (int j = 0; j < cols; ++j) {
@@ -146,15 +146,18 @@ void Game::redistributeMines (int i, int j) {
     }
   }
   
-  int idx = posIndex[std::make_pair(i,j)];
-  //traverse the probabilities and pick one that doesn't have mine in position i j
   std::vector<int> desiredLayout;
-  for (int i = 0; i < probabilites.size(); ++i) {
-    if (!probabilites[i][idx]) {
-      desiredLayout = probabilites[i];
-      break;
+  if (posIndex.find(std::make_pair(posI,posJ)) != posIndex.end()) {
+    for (int i = 0; i < probabilites.size(); ++i) {
+      int idx = posIndex[std::make_pair(posI,posJ)];
+      if (!probabilites[i][idx]) {
+        desiredLayout = probabilites[i];
+        break;
+      }
     }
   }
+  else desiredLayout = probabilites[0];
+  //traverse the probabilities and pick one that doesn't have mine in position i j
 
   //force this layout
   int distributed_mines = 0;
@@ -173,19 +176,30 @@ void Game::redistributeMines (int i, int j) {
     }
   }
 
-  //position rest of the mines
+  //position rest of the mines:
+  //first traverse the board finding available position for the mines
+  std::vector<std::pair<int,int>> availablePos;
+  for (int i = 0; i < rows; ++i) {
+    for (int j = 0; j < cols; ++j) {
+      if ((i == posI && j == posJ) || board[i][j].isRevealed || posIndex.find(std::make_pair(i, j)) != posIndex.end()) continue;
+      availablePos.push_back(std::make_pair(i,j));
+    }
+  }
+
+  //then use this array to distribute the mines randomly
   srand(time(NULL));
-  while (distributed_mines < total_mines) {
-    int i1 = rand() % rows;
-    int j1 = rand() % cols;
-    //If the random generated cell has already a mine or it's in between the first clicked 3*3 area, continue
-    if (board[i1][j1].hasMine || board[i1][j1].isRevealed || posIndex.find(std::make_pair(i1, j1)) != posIndex.end()) continue;
+  while (availablePos.size() > 0 && distributed_mines < total_mines) {
+    std::cout << 'a' << std::endl;
+    int idx = rand() % availablePos.size();
+    int i1 = availablePos[idx].first;
+    int j1 = availablePos[idx].second;
     board[i1][j1].hasMine = true;
     for (int k = 0; k < adjI.size(); ++k){
       int posI = i1+adjI[k];
       int posJ = j1+adjJ[k];
       if (pos_ok(posI, posJ)) ++board[posI][posJ].numAdjacentMines;
     }
+    availablePos.erase(std::next(availablePos.begin(), idx));
     ++distributed_mines;
   }
 }

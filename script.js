@@ -2,7 +2,6 @@ import initModule from './game/game.js'
 
 const Module = await initModule();
 const Game = Module.Game;
-console.log(Game)
 let myGame;
 
 const grid = document.getElementById('grid');
@@ -10,6 +9,7 @@ const face = document.getElementById('face');
 const timer = document.querySelector('.timer');
 const mines = document.querySelector('.mines');
 const overlay = document.getElementById('overlay');
+face.addEventListener('click', startGame); 
 
 const GameStates = {
   READY: 0,
@@ -19,19 +19,41 @@ const GameStates = {
 };
 
 let gameState;
-let rows = 9;
-let cols = 9;
-let totalMines = 10;
+let rows = 16;
+let cols = 16;
+let totalMines = 50;
+
 
 let time = 0;
 let intervalId;
 
-// Create grid
-function createGrid() {
+// paint grid
+function paintGrid() {
+  mines.textContent = `${pad(myGame.getRemainingMines())}`
+  while (grid.lastChild) {
+    grid.removeChild(grid.lastChild);
+  }
+  const data = myGame.printBoard();
   for (let i = 0; i < rows; i++) {
     for (let j = 0; j < cols; j++) {
       const cell = document.createElement('div');
       cell.classList.add('cell');
+
+      const info = data[i*cols + j];
+      if (gameState === GameStates.LOSE) {
+        if (info === 'e' || info === 'm') cell.classList.add('mine');
+        else if (info !== 'c' && info !== 'f') {
+          cell.classList.add('revealed', 'number', `number-${info}`);
+          if (info !== '0') cell.innerHTML = info;
+        }
+      }
+      else {
+        if (info === 'f') cell.classList.add('flagged');
+        else if (info !== 'c') {
+          cell.classList.add('revealed', 'number', `number-${info}`);
+          if (info !== '0') cell.innerHTML = info;
+        }
+      }
       cell.dataset.i = i;
       cell.dataset.j = j;
       cell.addEventListener('click', handleClick);
@@ -43,10 +65,14 @@ function createGrid() {
 
 // Start game
 function startGame() {
-  myGame = new Game(rows, cols, totalMines)
+  myGame = new Game(rows, cols, totalMines);
+  //change grid space
+  var r = document.querySelector(':root');
+  r.style.setProperty('--rows', rows);
+  r.style.setProperty('--cols', cols);
+
   gameState = myGame.getGameState();
   time = 0;
-  clearInterval(intervalId);
   timer.textContent = '000';
   face.classList.remove('sad');
   face.classList.remove('win');
@@ -59,163 +85,65 @@ function startGame() {
     cell.classList.remove('revealed', 'flagged', 'mine', 'number');
     cell.textContent = '';
   });
-
-  // Place mines randomly
-  while (mineLocations.length < totalMines) {
-    let randomIndex = Math.floor(Math.random() * 81);
-    if (!mineLocations.includes(randomIndex)) {
-      mineLocations.push(randomIndex);
-    }
-  }
-
-  // Start timer
-  intervalId = setInterval(() => {
-    time++;
-    timer.textContent = pad(time);
-  }, 1000);
 }
 
 // Handle cell click
 function handleClick(e) {
-  if (gameOver) return;
+  if (gameState === GameStates.LOSE || gameState === GameStates.WIN) return;
 
   const cell = e.target;
-  const index = parseInt(cell.dataset.index);
+  const i = parseInt(cell.dataset.i);
+  const j = parseInt(cell.dataset.j);
 
-  // Start game on first click
-  if (!gameStarted) {
-    startGame();
-    // Make sure first click is not on a mine
-    if (mineLocations.includes(index)) {
-      let newIndex = Math.floor(Math.random() * 81);
-      while (mineLocations.includes(newIndex)) {
-        newIndex = Math.floor(Math.random() * 81);
-      }
-      mineLocations[mineLocations.indexOf(index)] = newIndex;
-    }
+  if (gameState === GameStates.READY) {
+      // Start timer
+      intervalId = setInterval(() => {
+        time++;
+        timer.textContent = pad(time);
+      }, 1000);
   }
 
-  // Reveal cell
-  if (cell.classList.contains('revealed') || cell.classList.contains('flagged')) return;
-
-  if (mineLocations.includes(index)) {
-    gameOver = true;
-    face.classList.remove('happy');
+  myGame.clickCell(i, j);
+  gameState = myGame.getGameState();
+  if (gameState === GameStates.WIN) {
+    face.classList.add('win');
+    clearInterval(intervalId);
+  }
+  else if (gameState === GameStates.LOSE) {
     face.classList.add('sad');
-    overlay.classList.remove('hidden');
-
-    // Reveal all mines
-    mineLocations.forEach(i => {
-      const mineCell = grid.querySelector(`.cell[data-index="${i}"]`);
-      mineCell.classList.add('mine');
-    });
-  } else {
-    revealCell(index);
+    clearInterval(intervalId);
   }
+  paintGrid();
+
 }
 
 // Handle right click
 function handleRightClick(e) {
-  if (gameOver) return;
-
+  if (gameState === GameStates.LOSE || gameState === GameStates.WIN) return;
   e.preventDefault();
   const cell = e.target;
-  if (cell.classList.contains('revealed')) return;
+  const i = parseInt(cell.dataset.i);
+  const j = parseInt(cell.dataset.j);
 
-  if (cell.classList.contains('flagged')) {
-    cell.classList.remove('flagged');
-    flaggedCells--;
-    mines.textContent = pad(totalMines - flaggedCells);
-  } else {
-    cell.classList.add('flagged');
-    flaggedCells++;
-    mines.textContent = pad(totalMines - flaggedCells);
-  }
-}
-
-// Reveal a cell and its neighbors
-function revealCell(index) {
-  const cell = grid.querySelector(`.cell[data-index="${index}"]`);
-  if (cell.classList.contains('revealed')) return;
-
-  revealedCells++;
-  cell.classList.add('revealed');
-  if (mineLocations.includes(index)) {
-    gameOver = true;
-    face.classList.remove('happy');
-    face.classList.add('sad');
-    overlay.classList.remove('hidden');
-    return;
+  if (gameState === GameStates.READY) {
+    // Start timer
+    intervalId = setInterval(() => {
+      time++;
+      timer.textContent = pad(time);
+    }, 1000);
   }
 
-  // Check if cell is adjacent to a mine
-  const adjacentMines = countAdjacentMines(index);
-  if (adjacentMines > 0) {
-    cell.classList.add('number', `number-${adjacentMines}`);
-    cell.textContent = adjacentMines;
-  } else {
-    // Recursively reveal empty neighbors
-    revealNeighbors(index);
-  }
-
-  // Check if game is won
-  if (revealedCells === 81 - totalMines) {
-    gameOver = true;
-    face.classList.remove('happy');
+  myGame.rightClickCell(i, j);
+  gameState = myGame.getGameState();
+  if (gameState === GameStates.WIN) {
     face.classList.add('win');
-    overlay.classList.remove('hidden');
     clearInterval(intervalId);
   }
-}
-
-// Count adjacent mines
-function countAdjacentMines(index) {
-  let count = 0;
-  const neighbors = getNeighbors(index);
-  neighbors.forEach(neighbor => {
-    if (mineLocations.includes(neighbor)) {
-      count++;
-    }
-  });
-  return count;
-}
-
-// Get neighbors of a cell
-function getNeighbors(index) {
-  const neighbors = [];
-  const row = Math.floor(index / 9);
-  const col = index % 9;
-
-  // Top row
-  if (row > 0) {
-    neighbors.push(index - 9);
-    if (col > 0) neighbors.push(index - 10);
-    if (col < 8) neighbors.push(index - 8);
+  else if (gameState === GameStates.LOSE) {
+    face.classList.add('sad');
+    clearInterval(intervalId);
   }
-
-  // Middle row
-  if (col > 0) neighbors.push(index - 1);
-  if (col < 8) neighbors.push(index + 1);
-
-  // Bottom row
-  if (row < 8) {
-    neighbors.push(index + 9);
-    if (col > 0) neighbors.push(index + 8);
-    if (col < 8) neighbors.push(index + 10);
-  }
-
-  return neighbors;
-}
-
-// Recursively reveal empty neighbors
-function revealNeighbors(index) {
-  const neighbors = getNeighbors(index);
-  neighbors.forEach(neighbor => {
-    const neighborCell = grid.querySelector(`.cell[data-index="${neighbor}"]`);
-    if (!neighborCell.classList.contains('revealed') && !neighborCell.classList.contains('flagged')) {
-      revealCell(neighbor);
-    }
-  });
+  paintGrid();
 }
 
 // Pad number with zeros
@@ -224,5 +152,5 @@ function pad(num) {
 }
 
 // Initialize game
-createGrid();
 startGame();
+paintGrid();
