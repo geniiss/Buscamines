@@ -140,21 +140,47 @@ body {
   color: #808080;
 }
 
-.overlay {
-  position: absolute;
+#menu {
+  position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  background: #222;
   display: flex;
   justify-content: center;
   align-items: center;
-  font-size: 30px;
   color: #fff;
-  z-index: 1;
 }
 
-.overlay.hidden {
-  display: none;
+.button-container {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.difficulty-button {
+  padding: 15px 30px;
+  font-size: 16px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.difficulty-button:hover {
+  background-color: #555;
+}
+
+.easy {
+  background-color: #4CAF50; /* Green */
+}
+
+.medium {
+  background-color: #FFC107; /* Amber */
+}
+
+.hard {
+  background-color: #F44336; /* Red */
 }

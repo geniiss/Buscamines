@@ -4,6 +4,7 @@
 #include <vector>
 #include <unordered_map>
 #include <unordered_set>
+#include <queue>
 #include <stdlib.h> 
 #include <time.h>
 #include <string>
@@ -44,9 +45,9 @@ class Game {
     std::unordered_set<std::pair<int,int>, pair_hash> safeCells;
     std::unordered_set<std::pair<int,int>, pair_hash> mineCells;
     std::unordered_set<std::pair<int,int>, pair_hash> uncertainCells; 
-    std::vector<std::vector<int>> probabilites;
-    std::vector<std::pair<int, int>> indexPos; //maps the index with the board position
-    std::unordered_map<std::pair<int, int>, int, pair_hash> posIndex; //maps the position with the index
+    std::vector<std::vector<std::vector<int>>> probabilites;
+    std::vector<std::vector<std::pair<int, int>>> indexPos; //maps the index with the board position
+    std::vector<std::unordered_map<std::pair<int, int>, int, pair_hash>> posIndex; //maps the position with the index
 
 
     //auxiliar vectors to iterate over the adjacent cells
