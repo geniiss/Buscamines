@@ -4,6 +4,7 @@ const Module = await initModule();
 const Game = Module.Game;
 let myGame;
 
+const modeButton = document.getElementById('mode-button');
 const grid = document.getElementById('grid');
 const face = document.getElementById('face');
 const timer = document.querySelector('.timer');
@@ -40,7 +41,7 @@ let gameState;
 let rows = 8;
 let cols = 8;
 let totalMines = 13;
-
+let discoverMode = true;
 
 let time = 0;
 let intervalId;
@@ -83,14 +84,16 @@ function paintGrid() {
       
       const info = data[i*cols + j];
       if (gameState === GameStates.LOSE) {
-        if (info === 'e' || info === 'm') cell.classList.add('mine');
+        if (info === 'e') cell.innerHTML = '🚩';
+        else if (info === 'm') cell.innerHTML = '💣';
+        else if (info === 'f') cell.innerHTML = '❌';
         else if (info !== 'c' && info !== 'f') {
           cell.classList.add('revealed', 'number', `number-${info}`);
           if (info !== '0') cell.innerHTML = info;
         }
       }
       else {
-        if (info === 'f') cell.classList.add('flagged');
+        if (info === 'f') cell.innerHTML = '🚩';
         else if (info !== 'c') {
           cell.classList.add('revealed', 'number', `number-${info}`);
           if (info !== '0') cell.innerHTML = info;
@@ -108,7 +111,7 @@ function paintGrid() {
 // Start game
 function startGame() {
   clearInterval(intervalId);
-  myGame = new Game(rows, cols, totalMines);
+  myGame = new Game(rows, cols, totalMines, discoverMode);
   //change grid space
   var r = document.querySelector(':root');
   r.style.setProperty('--rows', rows);
@@ -193,6 +196,14 @@ function pad(num) {
   return ('000' + num).slice(-3);
 }
 
+function toggleMode() {
+  discoverMode = !discoverMode;
+  if (discoverMode) modeButton.innerHTML='⛏️';
+  else modeButton.innerHTML='🚩';
+  myGame.setGameMode(discoverMode);
+}
+
 // Initialize game
 showDifficulties()
+modeButton.addEventListener('click', toggleMode);
 face.addEventListener('click', startGame); 

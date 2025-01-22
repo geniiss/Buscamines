@@ -70,14 +70,15 @@ bool Game::checkWin () {
   return true;
 }
 
-Game::Game (int r, int c, int m) : rows(r), cols(c), total_mines(m) {
+Game::Game (int r, int c, int m, bool mode) : rows(r), cols(c), total_mines(m) {
   this->remaining_mines = m;
+  this->discoverMode = mode;
   this->board = std::vector<std::vector<Squares>>(r, std::vector<Squares>(c));
 }
 
 void Game::rightClickCell (int i, int j) {
   if (!pos_ok(i,j)) return;
-  if (speedRunMode) {
+  if (!discoverMode) {
     unveilCell(i,j);
     return;
   }
@@ -107,7 +108,7 @@ void Game::clickCell (int i, int j) {
     }
     return;
   }
-  if (speedRunMode) {
+  if (!discoverMode) {
     markCell(i, j);
     return;
   }
@@ -143,4 +144,8 @@ int Game::getGameState(){
 
 int Game::getRemainingMines() {
   return remaining_mines;
+}
+
+void Game::setGameMode(bool mode) {
+  discoverMode = mode;
 }

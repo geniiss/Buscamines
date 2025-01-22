@@ -13,6 +13,17 @@ std::vector<std::pair<int,int>> Game::adjacentCoveredCells(int i, int j) {
   return result;
 }
 
+std::vector<std::pair<int,int>> Game::adjacentUncoveredCells(int i, int j) {
+  std::vector<std::pair<int,int>> result;
+  for (int k = 0; k < adjI.size(); ++k) {
+    int posI = i+adjI[k];
+    int posJ = j+adjJ[k];
+    if (!pos_ok(posI, posJ) || !board[posI][posJ].isRevealed) continue;
+    result.push_back(std::make_pair(posI, posJ));
+  }
+  return result;
+}
+
 void Game::computeProbabilitiesBT (int n, const std::vector<std::vector<int>>& indexCond, const std::vector<std::vector<int>>& conditions, std::vector<int>& currentDisp, std::vector<std::vector<int>>& results, int currentMines) {
   if (currentMines > total_mines) return;
   int lastAddedCellIdx = currentDisp.size()-1; 
@@ -49,8 +60,8 @@ void Game::computeProbabilitiesBT (int n, const std::vector<std::vector<int>>& i
 void Game::computeProbabilities () {
   indexPos.clear(); //maps the index with the board position
   posIndex.clear(); //maps the position with the index
-  std::vector<std::vector<std::vector<int>>> conditions; //the first element of each vector is how many mines should its adjacent cells have, and the rest of the elements have the indices of its adjacent cells
-  std::vector<std::vector<std::vector<int>>> indexCond; //each vector contains every condition index that is in contact with the cell of each index
+  conditions.clear(); //the first element of each vector is how many mines should its adjacent cells have, and the rest of the elements have the indices of its adjacent cells
+  indexCond.clear(); //each vector contains every condition index that is in contact with the cell of each index
   /*
   * for cell of idx 0, it is in contact with conditions 5 3 and 2
   * and for cell of idx 1, it is in contact with conditions 3, 2 and 1
@@ -71,10 +82,10 @@ void Game::computeProbabilities () {
         conditions.push_back(std::vector<std::vector<int>>());
         indexCond.push_back(std::vector<std::vector<int>>());
 
-        //start of a bfs
+        //bfs
         std::queue<std::pair<int, int>> cellsToStudy;
         cellsToStudy.push(std::make_pair(i, j));
-        while (!cellsToStudy.empty() && indexPos[idxSituation].size() < 10) {
+        while (!cellsToStudy.empty() && indexPos[idxSituation].size() < chunkSize) {
           int i1 = cellsToStudy.front().first;
           int j1 = cellsToStudy.front().second;
           cellsToStudy.pop();
@@ -103,7 +114,7 @@ void Game::computeProbabilities () {
             int i2 = i1 + adjI[k];
             int j2 = j1 + adjJ[k];
 
-            if (pos_ok(i2, j2) && board[i2][j2].isRevealed && board[i2][j2].numAdjacentMines > 0 && addedConds.find(std::make_pair(i2, j2)) == addedConds.end()) {
+            if (pos_ok(i2, j2) && board[i2][j2].isRevealed && board[i2][j2].numAdjacentMines > 0 && addedConds.find(std::make_pair(i2, j2)) == addedConds.end() && posIndex[idxSituation].find(std::make_pair(i2, j2)) == posIndex[idxSituation].end()) {
               cellsToStudy.push(std::make_pair(i2, j2));
             }
           }
@@ -146,7 +157,7 @@ void Game::computeProbabilities () {
         if (probabilites[i][j][k] != probabilites[i][0][k]) {
           auto it = uncertainPos[i].find(k);
           if (it == uncertainPos[i].end()) uncertainPos[i].insert(k);
-        }
+        } 
       }
     }
   }
@@ -162,21 +173,16 @@ void Game::computeProbabilities () {
 
   for (int i = 0; i < minePos.size(); ++i) {
     for (int idxCell : minePos[i]) {
-      std::pair<int,int> pos = indexPos[i][idxCell];
-      auto it = safeCells.find(pos);
-      if (it == safeCells.end()) mineCells.insert(pos);
-      else {
-        safeCells.erase(it);
-        uncertainCells.insert(pos);
-      }
+      mineCells.insert(indexPos[i][idxCell]);
     }
   }
 
   for (int i = 0; i < uncertainPos.size(); ++i) {
     for (int idxCell : uncertainPos[i]) {
       std::pair<int,int> pos = indexPos[i][idxCell];
-      auto it = uncertainCells.find(pos);
-      if (it == uncertainCells.end()) uncertainCells.insert(pos);
+      auto itSafe = safeCells.find(pos);
+      auto itMine = mineCells.find(pos);
+      if (itSafe == safeCells.end() && itMine == mineCells.end()) uncertainCells.insert(pos);
     }
   }
   
@@ -200,69 +206,87 @@ void Game::computeProbabilities () {
   std::cout << std::endl;
 }
 
-void Game::redistributeMines (int posI, int posJ) {
-  //clean whole board taking account the covered/uncovered and marked/unmarked
-  // for (int i = 0; i < rows; ++i) {
-  //   for (int j = 0; j < cols; ++j) {
-  //     board[i][j].hasMine = false;
-  //     board[i][j].numAdjacentMines = 0;
-  //   }
-  // }
-  
-  // std::vector<int> desiredLayout;
-  // if (posIndex.find(std::make_pair(posI,posJ)) != posIndex.end()) {
-  //   for (int i = 0; i < probabilites.size(); ++i) {
-  //     int idx = posIndex[std::make_pair(posI,posJ)];
-  //     if (!probabilites[i][idx]) {
-  //       desiredLayout = probabilites[i];
-  //       break;
-  //     }
-  //   }
-  // }
-  // else desiredLayout = probabilites[0];
-  // //traverse the probabilities and pick one that doesn't have mine in position i j
+void Game::redistributeMines (int posI, int posJ, bool eraseMine) {
+  std::pair<int,int> position = {posI, posJ};
+  if (safeCells.find(position) == safeCells.end() && mineCells.find(position) == mineCells.end() && uncertainCells.find(position) == uncertainCells.end()) {
+    //take mine out
+    board[posI][posJ].hasMine = !eraseMine;
+    for (int k = 0; k < adjI.size(); ++k) {
+      int i1 = posI+adjI[k]; 
+      int j1 = posJ+adjJ[k];
+      if (pos_ok(i1, j1)) --board[i1][j1].numAdjacentMines;
+    }
+    //insert mine somewhere else (hidden)
+    for (int i = 0; i < rows; ++i) {
+      bool stop = false;
+      for (int j = 0; j < cols && !stop; ++j) {
+        position = {i, j};
+        if ((i != posI || j != posJ) && !board[i][j].isRevealed && board[i][j].hasMine != eraseMine && safeCells.find(position) == safeCells.end() && mineCells.find(position) == mineCells.end() && uncertainCells.find(position) == uncertainCells.end()) {
+          stop = true;
+          board[i][j].hasMine = true;
+          for (int k = 0; k < adjI.size(); ++k) {
+            int i1 = i+adjI[k]; 
+            int j1 = j+adjJ[k];
+            if (pos_ok(i1, j1)) ++board[i1][j1].numAdjacentMines;
+          }
+        }
+      }
+      if (stop) break;
+    }
+    std::cout << "redistribuit mina de l'interior" << std::endl;
+    return;
+  }
 
-  // //force this layout
-  // int distributed_mines = 0;
-  // for (int i = 0; i < desiredLayout.size(); ++i) {
-  //   if (desiredLayout[i]) {
-  //     ++distributed_mines;
-  //     std::pair<int,int> pos = indexPos[i];
-  //     int i1 = pos.first;
-  //     int j1 = pos.second;
-  //     board[i1][j1].hasMine = true;
-  //     for (int k = 0; k < adjI.size(); ++k){
-  //       int posI = i1+adjI[k];
-  //       int posJ = j1+adjJ[k];
-  //       if (pos_ok(posI, posJ)) ++board[posI][posJ].numAdjacentMines;
-  //     }
-  //   }
-  // }
+  bool done = false;
+  for (int i = 0; i < posIndex.size() && !done; ++i) {
+    auto it = posIndex[i].find(std::make_pair(posI, posJ));
+    if (it != posIndex[i].end()) {
+      int idx = it->second;
+      for (int j = 0; j < probabilites[i].size() && !done; ++j) {
+        bool valid = true;
+        for (int k = 0; k < probabilites[i][j].size() && valid; ++k) {
+          if (k == idx && probabilites[i][j][k] == eraseMine) {
+            valid = false;
+            break;
+          }
+          std::pair<int,int> pos = indexPos[i][k];
+          if (probabilites[i][j][k] && safeCells.find(pos) != safeCells.end()) {
+            valid = false;
+            break;
+          }
+          if (!probabilites[i][j][k] && mineCells.find(pos) != mineCells.end()) {
+            valid = false;
+            break;
+          }
+        }
+        if (valid) {
+          //cleanse the number of adj mines
+          for (int k = 0; k < probabilites[i][j].size(); ++k) {
+            std::pair<int,int> pos = indexPos[i][k];
+            if (!board[pos.first][pos.second].hasMine) continue;
+            for (int l = 0; l < adjI.size(); ++l) {
+              int i1 = pos.first + adjI[l];
+              int j1 = pos.second + adjJ[l];
+              if(!pos_ok(i1, j1)) continue;
+              --board[i1][j1].numAdjacentMines;
+            }
+          }
 
-  // //position rest of the mines:
-  // //first traverse the board finding available position for the mines
-  // std::vector<std::pair<int,int>> availablePos;
-  // for (int i = 0; i < rows; ++i) {
-  //   for (int j = 0; j < cols; ++j) {
-  //     if ((i == posI && j == posJ) || board[i][j].isRevealed || posIndex.find(std::make_pair(i, j)) != posIndex.end()) continue;
-  //     availablePos.push_back(std::make_pair(i,j));
-  //   }
-  // }
-
-  // //then use this array to distribute the mines randomly
-  // srand(time(NULL));
-  // while (availablePos.size() > 0 && distributed_mines < total_mines) {
-  //   std::cout << 'a' << std::endl;
-  //   int idx = rand() % availablePos.size();
-  //   int i1 = availablePos[idx].first;
-  //   int j1 = availablePos[idx].second;
-  //   board[i1][j1].hasMine = true;
-  //   for (int k = 0; k < adjI.size(); ++k){
-  //     int posI = i1+adjI[k];
-  //     int posJ = j1+adjJ[k];
-  //     if (pos_ok(posI, posJ)) ++board[posI][posJ].numAdjacentMines;
-  //   }
-  //   availablePos.erase(std::next(availablePos.begin(), idx));
-  //   ++distributed_mines;
-  // }
+          for (int k = 0; k < probabilites[i][j].size(); ++k) {
+            std::pair<int,int> pos = indexPos[i][k];
+            board[pos.first][pos.second].hasMine = probabilites[i][j][k];
+            if (probabilites[i][j][k]) 
+            for (int l = 0; l < adjI.size(); ++l) {
+              int i1 = pos.first + adjI[l];
+              int j1 = pos.second + adjJ[l];
+              if(!pos_ok(i1, j1)) continue;
+              ++board[i1][j1].numAdjacentMines;
+            }
+          }
+          done = true;
+        }
+      }
+    }
+  }
+  std::cout << "redistribuit mina de l'exterior" << std::endl;
 }

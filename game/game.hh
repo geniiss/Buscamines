@@ -39,7 +39,8 @@ class Game {
     const int cols;
     const int total_mines;
     int remaining_mines;
-    bool speedRunMode = true;
+    bool discoverMode = false;
+    static const int chunkSize = 25;
     GameStates gameState = READY;
     std::vector<std::vector<Squares>> board;
     std::unordered_set<std::pair<int,int>, pair_hash> safeCells;
@@ -48,6 +49,8 @@ class Game {
     std::vector<std::vector<std::vector<int>>> probabilites;
     std::vector<std::vector<std::pair<int, int>>> indexPos; //maps the index with the board position
     std::vector<std::unordered_map<std::pair<int, int>, int, pair_hash>> posIndex; //maps the position with the index
+    std::vector<std::vector<std::vector<int>>> conditions; //the first element of each vector is how many mines should its adjacent cells have, and the rest of the elements have the indices of its adjacent cells
+    std::vector<std::vector<std::vector<int>>> indexCond; //each vector contains every condition index that is in contact with the cell of each index
 
 
     //auxiliar vectors to iterate over the adjacent cells
@@ -64,15 +67,17 @@ class Game {
     void computeProbabilities ();
     void computeProbabilitiesBT (int n, const std::vector<std::vector<int>>& indexCond, const std::vector<std::vector<int>>& conditions, std::vector<int>& currentDisp, std::vector<std::vector<int>>& results, int currentMines);
     std::vector<std::pair<int, int>> adjacentCoveredCells(int, int);
-    void redistributeMines (int, int);
+    std::vector<std::pair<int, int>> adjacentUncoveredCells(int, int);
+    void redistributeMines (int, int, bool = true);
 
   public:
-    Game (int r, int c, int m);
+    Game (int r, int c, int m, bool mode);
     void rightClickCell (int i, int j);
     void clickCell (int i, int j);
     std::string printBoard ();
     int getGameState();
     int getRemainingMines();
+    void setGameMode(bool mode);
 };
 
 #endif

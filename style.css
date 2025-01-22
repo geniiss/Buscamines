@@ -184,3 +184,17 @@ body {
 .hard {
   background-color: #F44336; /* Red */
 }
+
+#mode-button {
+  width: 30px;
+  height: 30px;
+  background-color: #808080;
+  border: 1px solid #000;
+  border-radius: 5px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 10px auto 0; /* Centrar i col·locar sota la graella */
+  cursor: pointer;
+}
+
