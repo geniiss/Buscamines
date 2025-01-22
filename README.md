@@ -1,6 +1,4 @@
-## Autor
-
-Genís Carretero Ferrete
+# Buscamines
 
 ## Descripció del projecte
 
@@ -16,3 +14,7 @@ Finalment, com es tracta d'una web estàtica només caldrà obrir en un live ser
 ## Explicació de l'algorisme usat
 
 En comptes d'usar un SAT-solver que seria una solució fàcil i eficient, per desconeixement s'ha volgut implementar un algorisme de backtracking amb poda específic per resoldre aquest problema. A l'arxiu "algorithm.cc" es pot veure que la funció computeProbabilities() calcula les probabilitats i determina si, amb la informació accessible a l'usuari, hi ha caselles segures, caselles amb mina assegurada o caselles indeterminades. Si l'usuari destapés una casella indeterminada, tingués amb mina i a més no quedessin caselles segures, llavors la funció redistributeMines() es cridaria i redistribuiria les mines de manera que l'usuari no perdés la partida.
+
+## Autor
+
+Genís Carretero Ferrete
