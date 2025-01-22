@@ -1,8 +1,8 @@
-# Buscamines
+# Pescamines
 
 ## Descripció del projecte
 
-Implementació d'un buscamines el qual elimina el factor de sort del joc de buscamines original, fent que sigui un joc purament basat en habilitat. Per aconseguir-ho s'ha implementat un algorisme usant C++ i compilat de manera que es pugui executar al buscador. També s'ha implementat una interfície molt bàsica pel joc usant JavaScript, CSS i html.
+Implementació d'un pescamines el qual elimina el factor de sort del joc original, fent que sigui un joc purament basat en habilitat. Per aconseguir-ho s'ha implementat un algorisme usant C++ i compilat de manera que es pugui executar al buscador. També s'ha implementat una interfície molt bàsica usant JavaScript, CSS i html.
 Si es vol fer una petita prova del joc, es pot accedir a aquest enllaç: https://buscamines.vercel.app/
 
 ## Compilació i execució del projecte
